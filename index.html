@@ -1,0 +1,1363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content">
+<title>Max AI Assistant</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
+
+  :root {
+    --bg-main: #07041a;
+    --bg-gradient-1: #7b5cff33;
+    --bg-gradient-2: #38b6ff33;
+    --bg-gradient-3: #87ceeb22;
+    --chat-bg: rgba(14,8,40, 0.45);
+    --chat-border: rgba(150,110,255, 0.25);
+    --chat-glow-1: rgba(123,44,240, 0.3);
+    --chat-glow-2: rgba(90,30,200, 0.2);
+    --header-bg-1: rgba(123,44,240,0.15);
+    --header-bg-2: rgba(90,30,200,0.15);
+    --text-primary: #ffffff;
+    --text-secondary: #cccccc;
+    --text-muted: #888888;
+    --bot-bg-1: rgba(123,44,240,0.15);
+    --bot-bg-2: rgba(56,182,255,0.15);
+    --bot-border: rgba(123,44,240,0.3);
+    --input-bg: rgba(255,255,255,0.05);
+    --input-border: rgba(150,110,255,0.2);
+    --panel-bg: rgba(14,8,40, 0.95);
+
+    --online-color: #15dd0e;
+    --online-dot: #15dd0e;
+    --online-glow: rgba(23,233,16, 0.8);
+  }
+
+  body.light-mode {
+    --bg-main: #eef5ff;
+    --bg-gradient-1: #7b2cf022;
+    --bg-gradient-2: #38b6ff22;
+    --bg-gradient-3: #87ceeb33;
+    --chat-bg: rgba(255,255,255, 0.55);
+    --chat-border: rgba(110,40,200, 0.25);
+    --chat-glow-1: rgba(123,44,240, 0.2);
+    --chat-glow-2: rgba(90,30,200, 0.15);
+    --header-bg-1: rgba(123,44,240,0.1);
+    --header-bg-2: rgba(90,30,200,0.1);
+    --text-primary: #1a0a45;
+    --text-secondary: #3a3a6c;
+    --text-muted: #7788bb;
+    --bot-bg-1: rgba(123,44,240,0.12);
+    --bot-bg-2: rgba(56,182,255,0.12);
+    --bot-border: rgba(110,40,200,0.3);
+    --input-bg: rgba(255,255,255,0.7);
+    --input-border: rgba(130,110,255,0.3);
+    --panel-bg: rgba(255,255,255, 0.95);
+
+    --online-color: #15dd0e;
+    --online-dot: #15dd0e;
+    --online-glow: rgba(23,233,16, 0.8);
+  }
+
+  html, body {
+    height: 100%;
+    overflow: hidden;
+  }
+
+  body {
+    background: var(--bg-main);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    transition: background 0.5s ease;
+  }
+
+  body::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at 20% 30%, var(--bg-gradient-1), transparent 50%),
+                radial-gradient(circle at 80% 70%, var(--bg-gradient-2), transparent 50%),
+                radial-gradient(circle at 50% 50%, var(--bg-gradient-3), transparent 60%);
+    animation: bgMove 12s ease-in-out infinite alternate;
+    z-index: 0;
+  }
+
+  @keyframes bgMove {
+    0% { transform: scale(1) rotate(0deg); }
+    100% { transform: scale(1.2) rotate(10deg); }
+  }
+
+  #canvas-container {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    z-index: 1;
+    pointer-events: none;
+  }
+
+  .chat-wrapper {
+    position: relative;
+    z-index: 2;
+    width: 420px;
+    height: 640px;
+    max-width: 95vw;
+    max-height: 95vh;
+    background: var(--chat-bg);
+    backdrop-filter: blur(18px) saturate(140%);
+    -webkit-backdrop-filter: blur(18px) saturate(140%);
+    border-radius: 24px;
+    border: 1px solid var(--chat-border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-shadow: 0 0 60px var(--chat-glow-1),
+                0 0 120px var(--chat-glow-2);
+    animation: floaty 5s ease-in-out infinite;
+  }
+
+  @keyframes floaty {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-6px); }
+  }
+
+  .chat-header {
+    padding: 14px 18px;
+    background: linear-gradient(90deg, var(--header-bg-1), var(--header-bg-2));
+    color: var(--text-primary);
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    border-bottom: 1px solid var(--chat-border);
+    position: relative;
+    flex-shrink: 0;
+    z-index: 3;
+  }
+
+  .robot-3d {
+    width: 50px;
+    height: 50px;
+    position: relative;
+    flex-shrink: 0;
+    border-radius: 50%;
+    background: radial-gradient(circle at 30% 30%, rgba(123,44,240,0.25), rgba(56,182,255,0.15));
+    box-shadow: 0 0 20px rgba(123,44,240,0.5),
+                0 0 40px rgba(56,182,255,0.3);
+    overflow: hidden;
+  }
+
+  .robot-3d canvas {
+    width: 100% !important;
+    height: 100% !important;
+    display: block;
+    border-radius: 50%;
+  }
+
+  .header-info h2 {
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: 2px;
+    color: #8cf3ee;
+    text-shadow: 0 0 10px rgba(140,200,255, 0.8),
+                 0 0 20px rgba(123,44,240,0.6),
+                 0 0 30px rgba(135,206,250,0.4);
+    animation: nameGlow 3s ease-in-out infinite;
+    line-height: 1.1;
+  }
+
+  @keyframes nameGlow {
+    0%, 100% {
+      text-shadow: 0 0 10px rgba(140,200,255, 0.8),
+                   0 0 20px rgba(123,44,240,0.7),
+                   0 0 30px rgba(135,206,250,0.5);
+    }
+    50% {
+      text-shadow: 0 0 15px rgba(140,200,255, 0.8),
+                   0 0 25px rgba(135,206,250,0.9),
+                   0 0 40px rgba(123,44,240,0.6);
+    }
+  }
+
+  .header-info p {
+    font-size: 11px;
+    color: var(--online-color);
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    margin-top: 3px;
+  }
+
+  .dot {
+    width: 7px; height: 7px;
+    background: var(--online-dot);
+    border-radius: 50%;
+    box-shadow: 0 0 10px var(--online-glow);
+    animation: pulse 1.5s infinite;
+  }
+
+  @keyframes pulse {
+    0%,100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(1.3); }
+  }
+
+  .header-actions {
+    margin-left: auto;
+    display: flex;
+    gap: 8px;
+  }
+
+  .icon-btn {
+    width: 34px; height: 34px;
+    border-radius: 50%;
+    background: var(--input-bg);
+    border: 1px solid var(--input-border);
+    color: var(--text-primary);
+    cursor: pointer;
+    font-size: 15px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s;
+    flex-shrink: 0;
+  }
+
+  .icon-btn:hover {
+    background: rgba(123,44,240,0.3);
+    transform: scale(1.1);
+  }
+
+  .chat-body {
+    flex: 1;
+    padding: 18px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    -webkit-overflow-scrolling: touch;
+    position: relative;
+    z-index: 3;
+  }
+
+  .chat-body::-webkit-scrollbar { width: 6px; }
+  .chat-body::-webkit-scrollbar-track { background: transparent; }
+  .chat-body::-webkit-scrollbar-thumb {
+    background: linear-gradient(#7b2cf0, #38b6ff);
+    border-radius: 3px;
+  }
+
+  .msg {
+    max-width: 78%;
+    padding: 12px 16px;
+    border-radius: 18px;
+    font-size: 14px;
+    line-height: 1.5;
+    word-wrap: break-word;
+    color: var(--text-primary);
+    position: relative;
+    will-change: transform, opacity;
+    backface-visibility: hidden;
+    transform: translateZ(0);
+  }
+
+  .user {
+    background: linear-gradient(135deg, #7b2cf0, #38b6ff);
+    color: #fff;
+    align-self: flex-end;
+    border-bottom-right-radius: 4px;
+    box-shadow: 0 4px 20px rgba(123,44,240,0.4);
+    animation: userMsgIn 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  @keyframes userMsgIn {
+    0% { opacity: 0; transform: translate3d(30px, 20px, 0) scale(0.92); }
+    40% { opacity: 1; }
+    100% { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+  }
+
+  .bot {
+    background: linear-gradient(135deg, var(--bot-bg-1), var(--bot-bg-2));
+    align-self: flex-start;
+    border: 1px solid var(--bot-border);
+    border-bottom-left-radius: 4px;
+    animation: botMsgIn 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  @keyframes botMsgIn {
+    0% { opacity: 0; transform: translate3d(-30px, 20px, 0) scale(0.92); }
+    40% { opacity: 1; }
+    100% { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+  }
+
+  .user::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    animation: userGlow 1.2s ease-out;
+  }
+
+  @keyframes userGlow {
+    0% { box-shadow: 0 0 0 0 rgba(123,44,240,0.5); }
+    100% { box-shadow: 0 0 0 20px rgba(123,44,240,0); }
+  }
+
+  .bot::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    animation: botGlow 1.2s ease-out;
+  }
+
+  @keyframes botGlow {
+    0% { box-shadow: 0 0 0 0 rgba(56,182,255,0.5); }
+    100% { box-shadow: 0 0 0 20px rgba(56,182,255,0); }
+  }
+
+  .typing {
+    display: flex;
+    gap: 5px;
+    padding: 14px 18px;
+    background: rgba(123,44,240,0.1);
+    border-radius: 18px;
+    border-bottom-left-radius: 4px;
+    align-self: flex-start;
+    border: 1px solid var(--bot-border);
+    animation: typingIn 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  @keyframes typingIn {
+    0% { opacity: 0; transform: translate3d(-20px, 10px, 0) scale(0.9); }
+    100% { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+  }
+
+  .typing span {
+    width: 8px; height: 8px;
+    background: linear-gradient(135deg, #7b2cf0, #38b6ff);
+    border-radius: 50%;
+    animation: typingBounce 1.4s infinite ease-in-out;
+    box-shadow: 0 0 8px rgba(123,44,240,0.5);
+  }
+
+  .typing span:nth-child(2) { animation-delay: 0.2s; }
+  .typing span:nth-child(3) { animation-delay: 0.4s; }
+
+  @keyframes typingBounce {
+    0%, 60%, 100% { transform: translateY(0) scale(1); opacity: 0.5; }
+    30% { transform: translateY(-10px) scale(1.15); opacity: 1; }
+  }
+
+  .chat-input {
+    display: flex;
+    padding: 14px;
+    background: rgba(0,0,0,0.35);
+    gap: 8px;
+    border-top: 1px solid var(--chat-border);
+    flex-shrink: 0;
+    position: relative;
+    z-index: 3;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    align-items: center;
+  }
+
+  body.light-mode .chat-input {
+    background: rgba(255,255,255,0.4);
+  }
+
+  .chat-input input {
+    flex: 1;
+    padding: 14px 18px;
+    border: 1px solid var(--input-border);
+    border-radius: 25px;
+    background: var(--input-bg);
+    color: var(--text-primary);
+    outline: none;
+    font-size: 14px;
+    transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+    min-width: 0;
+  }
+
+  .chat-input input:focus {
+    border-color: #7b2cf0;
+    box-shadow: 0 0 15px rgba(123,44,240,0.4);
+    transform: scale(1.01);
+  }
+
+  .chat-input input::placeholder { color: var(--text-muted); }
+
+  .emoji-btn {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    border: 1px solid var(--input-border);
+    background: var(--input-bg);
+    color: var(--text-primary);
+    cursor: pointer;
+    font-size: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  .emoji-btn:hover {
+    background: rgba(123,44,240,0.25);
+    transform: scale(1.1) rotate(15deg);
+  }
+
+  .emoji-btn:active { transform: scale(0.9); }
+
+  .send-btn {
+    width: 42px;
+    height: 42px;
+    border: none;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #7b2cf0, #38b6ff);
+    color: #fff;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 16px;
+    transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+    box-shadow: 0 0 20px rgba(123,44,240,0.4);
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .send-btn:hover {
+    transform: scale(1.1);
+    box-shadow: 0 0 30px rgba(123,44,240,0.8);
+  }
+
+  .send-btn:active { transform: scale(0.9); }
+
+  .send-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .send-btn.clicked {
+    animation: sendPulse 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  @keyframes sendPulse {
+    0% { transform: scale(1); box-shadow: 0 0 20px rgba(123,44,240,0.4); }
+    50% { transform: scale(1.15); box-shadow: 0 0 40px rgba(123,44,240,1), 0 0 60px rgba(56,182,255,0.8); }
+    100% { transform: scale(1); box-shadow: 0 0 20px rgba(123,44,240,0.4); }
+  }
+
+  .emoji-picker {
+    position: absolute;
+    bottom: 80px;
+    right: 14px;
+    width: 300px;
+    max-height: 260px;
+    background: var(--panel-bg);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid var(--chat-border);
+    border-radius: 16px;
+    padding: 12px;
+    display: none;
+    z-index: 20;
+    box-shadow: 0 0 40px var(--chat-glow-1);
+    overflow: hidden;
+  }
+
+  .emoji-picker.active {
+    display: block;
+    animation: emojiIn 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  @keyframes emojiIn {
+    0% { opacity: 0; transform: translateY(20px) scale(0.9); }
+    100% { opacity: 1; transform: translateY(0) scale(1); }
+  }
+
+  .emoji-picker h4 {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+    padding-left: 4px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  .emoji-grid {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    gap: 4px;
+    max-height: 200px;
+    overflow-y: auto;
+    padding-right: 4px;
+  }
+
+  .emoji-grid::-webkit-scrollbar { width: 4px; }
+  .emoji-grid::-webkit-scrollbar-thumb {
+    background: linear-gradient(#7b2cf0, #38b6ff);
+    border-radius: 2px;
+  }
+
+  .emoji-item {
+    font-size: 22px;
+    padding: 6px 0;
+    text-align: center;
+    cursor: pointer;
+    border-radius: 8px;
+    transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+    user-select: none;
+  }
+
+  .emoji-item:hover {
+    background: rgba(123,44,240,0.2);
+    transform: scale(1.25) translateY(-2px);
+  }
+
+  .emoji-item:active { transform: scale(0.95); }
+
+  .settings-panel {
+    position: absolute;
+    top: 75px; right: 18px;
+    left: 18px;
+    max-width: 320px;
+    margin-left: auto;
+    background: var(--panel-bg);
+    backdrop-filter: blur(20px);
+    border-radius: 16px;
+    border: 1px solid var(--chat-border);
+    padding: 16px;
+    display: none;
+    z-index: 10;
+    box-shadow: 0 0 40px var(--chat-glow-1);
+  }
+
+  .settings-panel.active {
+    display: block;
+    animation: panelIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  @keyframes panelIn {
+    0% { opacity: 0; transform: translateY(-15px) scale(0.95); }
+    100% { opacity: 1; transform: translateY(0) scale(1); }
+  }
+
+  .settings-panel h3 {
+    color: var(--text-primary);
+    font-size: 14px;
+    margin-bottom: 12px;
+    background: linear-gradient(90deg, #7b2cf0, #87ceeb);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .settings-panel label {
+    display: block;
+    color: var(--text-secondary);
+    font-size: 12px;
+    margin-bottom: 6px;
+    margin-top: 10px;
+  }
+
+  .settings-panel select,
+  .settings-panel input {
+    width: 100%;
+    padding: 10px;
+    border-radius: 10px;
+    border: 1px solid var(--input-border);
+    background: var(--input-bg);
+    color: var(--text-primary);
+    font-size: 13px;
+    outline: none;
+  }
+
+  .settings-panel select option {
+    background: #1a0a45;
+    color: #fff;
+  }
+
+  .save-btn {
+    width: 100%;
+    margin-top: 14px;
+    padding: 10px;
+    border: none;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #7b2cf0, #38b6ff);
+    color: #fff;
+    font-weight: bold;
+    cursor: pointer;
+  }
+
+  @media (max-width: 500px) {
+    body { padding: 0; }
+
+    .chat-wrapper {
+      width: 100vw;
+      height: 100vh;
+      max-width: 100vw;
+      max-height: 100vh;
+      border-radius: 0;
+      animation: none;
+      border: none;
+      background: rgba(14,8,40, 0.85);
+      backdrop-filter: blur(15px);
+      -webkit-backdrop-filter: blur(15px);
+    }
+
+    body.light-mode .chat-wrapper {
+      background: rgba(255,255,255, 0.9);
+    }
+
+    .chat-header {
+      padding: 12px 14px;
+      padding-top: max(12px, env(safe-area-inset-top));
+    }
+
+    .robot-3d { width: 44px; height: 44px; }
+    .header-info h2 { font-size: 20px; }
+    .header-info p { font-size: 10px; }
+    .icon-btn { width: 32px; height: 32px; font-size: 14px; }
+
+    .chat-body { padding: 14px; gap: 10px; }
+    .msg { font-size: 13.5px; padding: 10px 14px; max-width: 82%; }
+
+    .chat-input {
+      padding: 10px 12px;
+      padding-bottom: max(10px, env(safe-area-inset-bottom));
+      gap: 6px;
+    }
+
+    .chat-input input { padding: 12px 16px; font-size: 14px; }
+    .emoji-btn { width: 38px; height: 38px; font-size: 18px; }
+    .send-btn { width: 38px; height: 38px; font-size: 15px; }
+
+    .emoji-picker {
+      width: calc(100vw - 20px);
+      left: 10px;
+      right: 10px;
+      bottom: 75px;
+    }
+
+    .settings-panel {
+      top: 65px;
+      left: 10px;
+      right: 10px;
+    }
+  }
+
+  @media (min-width: 501px) and (max-width: 900px) {
+    .chat-wrapper { width: 380px; height: 600px; }
+  }
+
+  @media (max-height: 600px) {
+    .chat-wrapper { height: 95vh; max-height: 95vh; }
+  }
+
+  /* ===== MOBILE SMOOTHNESS FIXES ===== */
+  .chat-body { overscroll-behavior: contain; }
+  .chat-input input { font-size: 16px; }
+  @media (max-width: 500px) {
+    #canvas-container { display: none; }
+    body::before { animation: none; }
+    .chat-wrapper {
+      height: 100vh; height: 100dvh;
+      max-height: 100vh; max-height: 100dvh;
+      backdrop-filter: none; -webkit-backdrop-filter: none;
+      background: rgba(14,8,40,0.96);
+    }
+    body.light-mode .chat-wrapper { background: rgba(238,245,255,0.97); }
+    html, body { height: 100vh; height: 100dvh; }
+    .chat-input { backdrop-filter: none; -webkit-backdrop-filter: none; }
+    .settings-panel, .emoji-picker { backdrop-filter: none; -webkit-backdrop-filter: none; background: var(--panel-bg); }
+    .msg { will-change: auto; backface-visibility: visible; max-width: 85%; }
+    .user::after, .bot::after { display: none; }
+    .header-info h2 { animation: none; }
+    .chat-input input:focus { transform: none; }
+  }
+</style>
+</head>
+<body>
+
+<div id="canvas-container"></div>
+
+<div class="chat-wrapper">
+  <div class="chat-header">
+    <div class="robot-3d" id="robotAvatar"></div>
+    <div class="header-info">
+      <h2>MAX AI</h2>
+      <p><span class="dot"></span> Online</p>
+    </div>
+    <div class="header-actions">
+      <button class="icon-btn" id="themeBtn" onclick="toggleTheme()">🌙</button>
+      <button class="icon-btn" onclick="toggleSettings()">⚙</button>
+    </div>
+  </div>
+
+  <div class="settings-panel" id="settingsPanel">
+    <h3>⚙ AI Configuration</h3>
+    <label>AI Provider:</label>
+    <select id="provider" onchange="updateModelOptions()">
+      <option value="deepseek">DeepSeek</option>
+      <option value="gemini">Google Gemini</option>
+      <option value="dummy">Demo (No API)</option>
+    </select>
+    <label>API Key:</label>
+    <input type="password" id="apiKey" placeholder="Paste your API key..." />
+    <label>Model:</label>
+    <select id="model"></select>
+    <button class="save-btn" onclick="saveSettings()">Save Settings</button>
+  </div>
+
+  <div class="chat-body" id="chatBody">
+    <div class="msg bot">Hi! Naan <b>Max</b> 🤖<br>Enna help venum sollunga!</div>
+  </div>
+
+  <div class="emoji-picker" id="emojiPicker">
+    <h4>😊 Emojis</h4>
+    <div class="emoji-grid" id="emojiGrid"></div>
+  </div>
+
+  <div class="chat-input">
+    <button class="emoji-btn" onclick="toggleEmoji()" title="Emojis">😊</button>
+    <input type="text" id="userInput" placeholder="Type your message..." autocomplete="off" />
+    <button class="send-btn" id="sendBtn" onclick="sendMsg()">➤</button>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+/* ============================================
+   CONFIG
+   FIX 1: provider value 'deepseek' (dropdown + code la same ah irukanum)
+   FIX 2: model 'deepseek-chat' (gpt-4o-mini DeepSeek la work aagaathu)
+   FIX 3: API key code la vaikkaama Settings (⚙) la paste pannunga
+   ============================================ */
+const CONFIG = {
+  provider: 'gemini',
+  apiKey: 'AQ.Ab8RN6K4nBdbHI0A3PXz6B7Rqo2YjvSG0N18e5eWSwg-pmvxig',   // 👈 INGA Gemini key ah paste pannunga (AIza... )
+  model: 'gemini-3.1-flash-lite'
+};
+
+const MODELS = {
+  deepseek: [
+    { value: 'deepseek-chat', label: 'deepseek-chat (fast, cheap)' },
+    { value: 'deepseek-reasoner', label: 'deepseek-reasoner (thinking, slow)' }
+  ],
+  gemini: [
+    { value: 'gemini-3.1-flash-lite', label: 'gemini-3.1-flash-lite (free, fast)' },
+    { value: 'gemini-3.6-flash', label: 'gemini-3.6-flash (smarter)' }
+  ],
+  dummy: [
+    { value: 'demo', label: 'demo' }
+  ]
+};
+
+const SYSTEM_PROMPT = 'You are Max, a friendly AI assistant. Reply in Tamil-English (Tanglish) mix if user writes Tamil. Keep replies short and helpful.';
+
+/* THEME */
+function applyTheme(theme) {
+  if(theme === 'light') {
+    document.body.classList.add('light-mode');
+    document.getElementById('themeBtn').textContent = '☀';
+  } else {
+    document.body.classList.remove('light-mode');
+    document.getElementById('themeBtn').textContent = '🌙';
+  }
+  localStorage.setItem('ai_theme', theme);
+}
+function toggleTheme() {
+  const current = localStorage.getItem('ai_theme') || 'dark';
+  applyTheme(current === 'dark' ? 'light' : 'dark');
+}
+applyTheme(localStorage.getItem('ai_theme') || 'dark');
+
+/* BACKGROUND ROBOT + PARTICLES */
+const isMobile = window.innerWidth < 600;
+
+const bgScene = new THREE.Scene();
+const bgCamera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
+const bgRenderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+bgRenderer.setSize(window.innerWidth, window.innerHeight);
+bgRenderer.setPixelRatio(Math.min(window.devicePixelRatio, isMobile ? 1.5 : 2));
+document.getElementById('canvas-container').appendChild(bgRenderer.domElement);
+
+const pCount = isMobile ? 200 : 500;
+const pGeo = new THREE.BufferGeometry();
+const posArr = new Float32Array(pCount * 3);
+const colArr = new Float32Array(pCount * 3);
+for(let i = 0; i < pCount * 3; i += 3) {
+  posArr[i]   = (Math.random() - 0.5) * 30;
+  posArr[i+1] = (Math.random() - 0.5) * 30;
+  posArr[i+2] = (Math.random() - 0.5) * 30;
+  const colors = [[0.48,0.17,0.94],[0.22,0.71,1],[0.53,0.81,0.92]];
+  const c = colors[Math.floor(Math.random()*3)];
+  colArr[i]=c[0]; colArr[i+1]=c[1]; colArr[i+2]=c[2];
+}
+pGeo.setAttribute('position', new THREE.BufferAttribute(posArr, 3));
+pGeo.setAttribute('color', new THREE.BufferAttribute(colArr, 3));
+
+const particleMat = new THREE.PointsMaterial({
+  size: 0.02, vertexColors: true, transparent: true, opacity: 0.6,
+  blending: THREE.AdditiveBlending, sizeAttenuation: true
+});
+const bgParticles = new THREE.Points(pGeo, particleMat);
+bgScene.add(bgParticles);
+
+bgScene.add(new THREE.AmbientLight(0xffffff, 0.7));
+const pinkLight = new THREE.PointLight(0x7b2cf0, 2.5, 30);
+pinkLight.position.set(6, 6, 8); bgScene.add(pinkLight);
+const blueLight = new THREE.PointLight(0x38b6ff, 2.5, 30);
+blueLight.position.set(-6, -3, 8); bgScene.add(blueLight);
+const cyanLight = new THREE.PointLight(0x87ceeb, 2, 30);
+cyanLight.position.set(0, 8, 5); bgScene.add(cyanLight);
+
+const bigRobot = new THREE.Group();
+const headMat = new THREE.MeshPhongMaterial({ color: 0xf0f0ff, shininess: 100, specular: 0x7b2cf0, emissive: 0x120a33 });
+const headGeo = new THREE.BoxGeometry(2.4, 2.0, 1.9, 5, 5, 5);
+const hPos = headGeo.attributes.position;
+for(let i = 0; i < hPos.count; i++) {
+  const x = hPos.getX(i), y = hPos.getY(i), z = hPos.getZ(i);
+  const r = 0.28;
+  hPos.setXYZ(i,
+    x - Math.sign(x) * Math.max(0, Math.abs(x) - (1.2 - r)),
+    y - Math.sign(y) * Math.max(0, Math.abs(y) - (1.0 - r)),
+    z - Math.sign(z) * Math.max(0, Math.abs(z) - (0.95 - r))
+  );
+}
+headGeo.computeVertexNormals();
+bigRobot.add(new THREE.Mesh(headGeo, headMat));
+
+const visorMat = new THREE.MeshPhongMaterial({ color: 0x0a0a24, shininess: 200, emissive: 0x0c0626 });
+const visorGeo = new THREE.BoxGeometry(2.15, 1.15, 0.2, 5, 5, 2);
+const vPos = visorGeo.attributes.position;
+for(let i = 0; i < vPos.count; i++) {
+  const x = vPos.getX(i), y = vPos.getY(i);
+  const r = 0.18;
+  vPos.setXYZ(i,
+    x - Math.sign(x) * Math.max(0, Math.abs(x) - (1.075 - r)),
+    y - Math.sign(y) * Math.max(0, Math.abs(y) - (0.575 - r)),
+    vPos.getZ(i)
+  );
+}
+visorGeo.computeVertexNormals();
+const visor = new THREE.Mesh(visorGeo, visorMat);
+visor.position.set(0, 0.05, 0.96);
+bigRobot.add(visor);
+
+const eyeMat = new THREE.MeshBasicMaterial({ color: 0x87ceeb });
+const eyeGeo = new THREE.CircleGeometry(0.22, 28);
+const eyeL = new THREE.Mesh(eyeGeo, eyeMat); eyeL.position.set(-0.55, 0.1, 1.15); bigRobot.add(eyeL);
+const eyeR = new THREE.Mesh(eyeGeo, eyeMat); eyeR.position.set(0.55, 0.1, 1.15); bigRobot.add(eyeR);
+
+const haloMat = new THREE.MeshBasicMaterial({ color: 0x87ceeb, transparent: true, opacity: 0.5 });
+const haloGeo = new THREE.CircleGeometry(0.38, 28);
+const haloL = new THREE.Mesh(haloGeo, haloMat); haloL.position.set(-0.55, 0.1, 1.14); bigRobot.add(haloL);
+const haloR = new THREE.Mesh(haloGeo, haloMat); haloR.position.set(0.55, 0.1, 1.14); bigRobot.add(haloR);
+
+const mouth = new THREE.Mesh(new THREE.PlaneGeometry(0.65, 0.08), new THREE.MeshBasicMaterial({ color: 0x7b2cf0 }));
+mouth.position.set(0, -0.5, 1.16);
+bigRobot.add(mouth);
+
+const earMat = new THREE.MeshPhongMaterial({ color: 0x7b2cf0, emissive: 0x4a1a99, shininess: 120 });
+const earGeo = new THREE.CylinderGeometry(0.28, 0.28, 0.38, 20);
+const earL = new THREE.Mesh(earGeo, earMat); earL.rotation.z = Math.PI/2; earL.position.set(-1.35, 0, 0); bigRobot.add(earL);
+const earR = new THREE.Mesh(earGeo, earMat); earR.rotation.z = Math.PI/2; earR.position.set(1.35, 0, 0); bigRobot.add(earR);
+
+const antennaMat = new THREE.MeshPhongMaterial({ color: 0xccccdd, shininess: 100 });
+const antennaBase = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.5, 10), antennaMat);
+antennaBase.position.set(0, 1.27, 0);
+bigRobot.add(antennaBase);
+
+const ballMat = new THREE.MeshBasicMaterial({ color: 0x87ceeb });
+const ball = new THREE.Mesh(new THREE.SphereGeometry(0.18, 20, 20), ballMat);
+ball.position.set(0, 1.6, 0);
+bigRobot.add(ball);
+
+const ballGlowMat = new THREE.MeshBasicMaterial({ color: 0x87ceeb, transparent: true, opacity: 0.4 });
+const ballGlow = new THREE.Mesh(new THREE.SphereGeometry(0.32, 20, 20), ballGlowMat);
+ballGlow.position.set(0, 1.6, 0);
+bigRobot.add(ballGlow);
+
+const strip = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.06, 0.06), new THREE.MeshBasicMaterial({ color: 0x7b2cf0 }));
+strip.position.set(0, 1.05, 0.55);
+bigRobot.add(strip);
+
+bigRobot.position.set(0, 0, -3);
+bigRobot.scale.setScalar(1.1);
+bgCamera.position.z = 6;
+bgScene.add(bigRobot);
+
+let bgTime = 0;
+let blinkTimer = 0;
+let isBlinking = false;
+let blinkProgress = 0;
+
+function animateBg() {
+  requestAnimationFrame(animateBg);
+  if(window.innerWidth <= 500 || document.hidden) return;
+  bgTime += 0.01;
+
+  bgParticles.rotation.y += 0.0003;
+  bgParticles.rotation.x += 0.00015;
+  particleMat.opacity = 0.5 + Math.sin(bgTime * 0.8) * 0.15;
+
+  bigRobot.position.y = Math.sin(bgTime * 0.8) * 0.15;
+  bigRobot.rotation.y = Math.sin(bgTime * 0.4) * 0.4;
+
+  ball.scale.setScalar(1 + Math.sin(bgTime * 3) * 0.15);
+  ballGlow.scale.setScalar(1 + Math.sin(bgTime * 3) * 0.2);
+  ballGlow.material.opacity = 0.4 + Math.sin(bgTime * 3) * 0.15;
+
+  eyeMat.color.setHSL(0.55, 1, 0.5 + Math.sin(bgTime * 2.5) * 0.1);
+  haloMat.opacity = 0.4 + Math.sin(bgTime * 2.5) * 0.15;
+
+  pinkLight.position.x = Math.cos(bgTime * 0.5) * 8;
+  pinkLight.position.z = Math.sin(bgTime * 0.5) * 8 + 4;
+  blueLight.position.x = Math.sin(bgTime * 0.5) * 8;
+  blueLight.position.z = Math.cos(bgTime * 0.5) * 8 + 4;
+
+  blinkTimer += 0.01;
+  if(!isBlinking && blinkTimer > 3 + Math.random() * 2) {
+    isBlinking = true; blinkTimer = 0; blinkProgress = 0;
+  }
+  if(isBlinking) {
+    blinkProgress += 0.12;
+    const blinkAmount = Math.sin(blinkProgress * Math.PI);
+    const scaleY = Math.max(0.05, 1 - blinkAmount);
+    eyeL.scale.y = scaleY; eyeR.scale.y = scaleY;
+    haloL.scale.y = scaleY; haloR.scale.y = scaleY;
+    if(blinkProgress >= 1) {
+      isBlinking = false;
+      eyeL.scale.y = 1; eyeR.scale.y = 1;
+      haloL.scale.y = 1; haloR.scale.y = 1;
+    }
+  }
+
+  bgRenderer.render(bgScene, bgCamera);
+}
+animateBg();
+
+window.addEventListener('resize', () => {
+  bgCamera.aspect = window.innerWidth / window.innerHeight;
+  bgCamera.updateProjectionMatrix();
+  bgRenderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+/* HEADER ROBOT AVATAR */
+function initRobot() {
+  const container = document.getElementById('robotAvatar');
+  if(!container) return;
+  const size = container.clientWidth || 50;
+
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(40, 1, 0.1, 100);
+  camera.position.set(0, 0.2, 4.2);
+
+  const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+  renderer.setSize(size, size);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  container.appendChild(renderer.domElement);
+
+  scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+  const pl = new THREE.PointLight(0x7b2cf0, 1.5, 10);
+  pl.position.set(2, 2, 3); scene.add(pl);
+  const bl = new THREE.PointLight(0x38b6ff, 1.5, 10);
+  bl.position.set(-2, -1, 3); scene.add(bl);
+  const cl = new THREE.PointLight(0x87ceeb, 1, 10);
+  cl.position.set(0, 3, 2); scene.add(cl);
+
+  const robot = new THREE.Group();
+  const headMat = new THREE.MeshPhongMaterial({ color: 0xf0f0ff, shininess: 100, specular: 0x7b2cf0, emissive: 0x0c0626 });
+  const headGeo = new THREE.BoxGeometry(1.3, 1.1, 1.0, 4, 4, 4);
+  const pos = headGeo.attributes.position;
+  for(let i = 0; i < pos.count; i++) {
+    const x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i);
+    const r = 0.15;
+    pos.setXYZ(i,
+      x - Math.sign(x) * Math.max(0, Math.abs(x) - (0.65 - r)),
+      y - Math.sign(y) * Math.max(0, Math.abs(y) - (0.55 - r)),
+      z - Math.sign(z) * Math.max(0, Math.abs(z) - (0.5 - r))
+    );
+  }
+  headGeo.computeVertexNormals();
+  robot.add(new THREE.Mesh(headGeo, headMat));
+
+  const visorMat = new THREE.MeshPhongMaterial({ color: 0x0a0a24, shininess: 200 });
+  const visorGeo = new THREE.BoxGeometry(1.15, 0.65, 0.15, 4, 4, 2);
+  const vpos = visorGeo.attributes.position;
+  for(let i = 0; i < vpos.count; i++) {
+    const x = vpos.getX(i), y = vpos.getY(i);
+    const r = 0.1;
+    vpos.setXYZ(i,
+      x - Math.sign(x) * Math.max(0, Math.abs(x) - (0.575 - r)),
+      y - Math.sign(y) * Math.max(0, Math.abs(y) - (0.325 - r)),
+      vpos.getZ(i)
+    );
+  }
+  visorGeo.computeVertexNormals();
+  const visor = new THREE.Mesh(visorGeo, visorMat);
+  visor.position.set(0, 0.02, 0.51);
+  robot.add(visor);
+
+  const eyeMat = new THREE.MeshBasicMaterial({ color: 0x87ceeb });
+  const eyeGeo = new THREE.CircleGeometry(0.1, 24);
+  const eyeL = new THREE.Mesh(eyeGeo, eyeMat); eyeL.position.set(-0.28, 0.05, 0.62); robot.add(eyeL);
+  const eyeR = new THREE.Mesh(eyeGeo, eyeMat); eyeR.position.set(0.28, 0.05, 0.62); robot.add(eyeR);
+
+  const haloMat = new THREE.MeshBasicMaterial({ color: 0x87ceeb, transparent: true, opacity: 0.4 });
+  const haloGeo = new THREE.CircleGeometry(0.18, 24);
+  const haloL = new THREE.Mesh(haloGeo, haloMat); haloL.position.set(-0.28, 0.05, 0.61); robot.add(haloL);
+  const haloR = new THREE.Mesh(haloGeo, haloMat); haloR.position.set(0.28, 0.05, 0.61); robot.add(haloR);
+
+  const mouth = new THREE.Mesh(new THREE.PlaneGeometry(0.3, 0.04), new THREE.MeshBasicMaterial({ color: 0x7b2cf0 }));
+  mouth.position.set(0, -0.22, 0.62);
+  robot.add(mouth);
+
+  const earMat = new THREE.MeshPhongMaterial({ color: 0x7b2cf0, emissive: 0x3a1480 });
+  const earGeo = new THREE.CylinderGeometry(0.15, 0.15, 0.2, 16);
+  const earL = new THREE.Mesh(earGeo, earMat); earL.rotation.z = Math.PI/2; earL.position.set(-0.72, 0, 0); robot.add(earL);
+  const earR = new THREE.Mesh(earGeo, earMat); earR.rotation.z = Math.PI/2; earR.position.set(0.72, 0, 0); robot.add(earR);
+
+  const antennaMat = new THREE.MeshPhongMaterial({ color: 0xccccdd });
+  const antennaBase = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.25, 8), antennaMat);
+  antennaBase.position.set(0, 0.68, 0);
+  robot.add(antennaBase);
+
+  const ballMat = new THREE.MeshBasicMaterial({ color: 0x87ceeb });
+  const ball = new THREE.Mesh(new THREE.SphereGeometry(0.09, 16, 16), ballMat);
+  ball.position.set(0, 0.85, 0);
+  robot.add(ball);
+
+  const ballGlowMat = new THREE.MeshBasicMaterial({ color: 0x87ceeb, transparent: true, opacity: 0.3 });
+  const ballGlow = new THREE.Mesh(new THREE.SphereGeometry(0.16, 16, 16), ballGlowMat);
+  ballGlow.position.set(0, 0.85, 0);
+  robot.add(ballGlow);
+
+  const strip = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.03, 0.03), new THREE.MeshBasicMaterial({ color: 0x7b2cf0 }));
+  strip.position.set(0, 0.56, 0.3);
+  robot.add(strip);
+
+  scene.add(robot);
+
+  let t = 0, blinkT = 0, isBlink = false, bp = 0;
+  function anim() {
+    requestAnimationFrame(anim);
+    if(document.hidden) return;
+    t += 0.02;
+    robot.position.y = Math.sin(t) * 0.08;
+    robot.rotation.y = Math.sin(t * 0.7) * 0.35;
+    robot.rotation.z = Math.sin(t * 1.2) * 0.05;
+    ball.scale.setScalar(1 + Math.sin(t * 4) * 0.15);
+    ballGlow.scale.setScalar(1 + Math.sin(t * 4) * 0.2);
+    ballGlow.material.opacity = 0.3 + Math.sin(t * 4) * 0.15;
+    eyeMat.color.setHSL(0.55, 1, 0.5 + Math.sin(t * 3) * 0.1);
+    haloMat.opacity = 0.3 + Math.sin(t * 3) * 0.15;
+    pl.position.x = Math.cos(t * 0.8) * 2;
+    bl.position.x = Math.sin(t * 0.8) * 2;
+
+    blinkT += 0.02;
+    if(!isBlink && blinkT > 3 + Math.random() * 2) {
+      isBlink = true; blinkT = 0; bp = 0;
+    }
+    if(isBlink) {
+      bp += 0.15;
+      const amt = Math.sin(bp * Math.PI);
+      const sY = Math.max(0.05, 1 - amt);
+      eyeL.scale.y = sY; eyeR.scale.y = sY;
+      haloL.scale.y = sY; haloR.scale.y = sY;
+      if(bp >= 1) {
+        isBlink = false;
+        eyeL.scale.y = 1; eyeR.scale.y = 1;
+        haloL.scale.y = 1; haloR.scale.y = 1;
+      }
+    }
+    renderer.render(scene, camera);
+  }
+  anim();
+
+  window.addEventListener('resize', () => {
+    const s = container.clientWidth || 50;
+    renderer.setSize(s, s);
+  });
+}
+window.addEventListener('load', initRobot);
+
+/* EMOJI PICKER */
+const emojiList = [
+  '😀','😃','😄','😁','😆','😅','🤣','😂','🙂','🙃','😉','😊','😇','🥰','😍','🤩',
+  '😘','😗','😚','😙','🥲','😋','😛','😜','🤪','😝','🤑','🤗','🤭','🤫','🤔','🤐',
+  '😐','😑','😶','😏','😒','🙄','😬','🤥','😌','😔','😪','🤤','😴','😷','🤒','🤕',
+  '👋','🤚','🖐','✋','🖖','👌','🤌','🤏','✌️','🤞','🤟','🤘','🤙','👈','👉','👆',
+  '👇','☝️','👍','👎','✊','👊','🤛','🤜','👏','🙌','👐','🤲','🤝','🙏','💪','🦾',
+  '❤️','🧡','💛','💚','💙','💜','🖤','🤍','🤎','💔','❣️','💕','💞','💓','💗','💖',
+  '💘','💝','💟','♥️','💌','💋','🫶','💐','🌹','🌸','🌺','🌻','🌷','🌼','💐','🌱',
+  '🎉','🎊','🎈','🎁','🎂','🍰','🧁','🍕','🍔','🍟','🍿','🍩','🍪','🍫','🍭','🍬',
+  '⚡','✨','💫','⭐','🌟','💥','🔥','💧','🌈','☀️','🌙','⛅','☁️','❄️','💨','🌊',
+  '🤖','👾','🎮','🕹️','💻','🖥️','⌨️','🖱️','📱','📲','💾','💿','📀','🎧','🎤','🎬'
+];
+
+function buildEmojiPicker() {
+  const grid = document.getElementById('emojiGrid');
+  emojiList.forEach(emoji => {
+    const btn = document.createElement('div');
+    btn.className = 'emoji-item';
+    btn.textContent = emoji;
+    btn.onclick = () => insertEmoji(emoji);
+    grid.appendChild(btn);
+  });
+}
+
+function toggleEmoji() {
+  document.getElementById('emojiPicker').classList.toggle('active');
+}
+
+function insertEmoji(emoji) {
+  const input = document.getElementById('userInput');
+  input.value += emoji;
+  input.focus();
+}
+
+document.addEventListener('click', (e) => {
+  const picker = document.getElementById('emojiPicker');
+  const emojiBtn = document.querySelector('.emoji-btn');
+  if(picker && picker.classList.contains('active')) {
+    if(!picker.contains(e.target) && !emojiBtn.contains(e.target)) {
+      picker.classList.remove('active');
+    }
+  }
+});
+
+buildEmojiPicker();
+
+/* ============================================
+   SETTINGS (localStorage la save aagum)
+   ============================================ */
+let saved = {};
+try { saved = JSON.parse(localStorage.getItem('max_ai_settings') || '{}'); } catch(e) { saved = {}; }
+
+let settings = {
+  provider: saved.provider || CONFIG.provider,
+  apiKey:   CONFIG.apiKey || saved.apiKey || '',
+  model:    saved.model    || CONFIG.model
+};
+
+function updateModelOptions(selectedModel) {
+  const provider = document.getElementById('provider').value;
+  const modelSel = document.getElementById('model');
+  modelSel.innerHTML = '';
+  (MODELS[provider] || []).forEach(m => {
+    const opt = document.createElement('option');
+    opt.value = m.value;
+    opt.textContent = m.label;
+    modelSel.appendChild(opt);
+  });
+  if(typeof selectedModel === 'string' && (MODELS[provider] || []).some(m => m.value === selectedModel)) {
+    modelSel.value = selectedModel;
+  }
+}
+
+window.addEventListener('load', () => {
+  document.getElementById('provider').value = settings.provider;
+  updateModelOptions(settings.model);
+  document.getElementById('apiKey').value = settings.apiKey;
+});
+
+function toggleSettings() {
+  document.getElementById('settingsPanel').classList.toggle('active');
+}
+
+function saveSettings() {
+  settings.provider = document.getElementById('provider').value;
+  settings.apiKey = document.getElementById('apiKey').value.trim();
+  settings.model = document.getElementById('model').value;
+  localStorage.setItem('max_ai_settings', JSON.stringify(settings));
+  history.length = 0; // provider maariduna pazhaya chat history clear
+  toggleSettings();
+  addMsg('✅ Settings updated! Ippo enna kekkalaam.', 'bot');
+}
+
+/* CHAT */
+const chatBody = document.getElementById('chatBody');
+const userInput = document.getElementById('userInput');
+const sendBtn = document.getElementById('sendBtn');
+const history = [];   // conversation memory: {role:'user'|'assistant', content:'...'}
+let busy = false;
+
+function escapeHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// AI reply ku safe formatting: **bold**, `code`, new lines
+function formatReply(s) {
+  return escapeHtml(s)
+    .replace(/\*\*(.+?)\*\*/g, '<b>$1</b>')
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    .replace(/\n/g, '<br>');
+}
+
+function sendMsg() {
+  const text = userInput.value.trim();
+  if(!text || busy) return;
+
+  busy = true;
+  sendBtn.disabled = true;
+  sendBtn.classList.add('clicked');
+  setTimeout(() => sendBtn.classList.remove('clicked'), 600);
+
+  document.getElementById('emojiPicker').classList.remove('active');
+
+  addMsg(escapeHtml(text), 'user');
+  userInput.value = '';
+  const typingEl = showTyping();
+
+  getAIReply(text).then(reply => {
+    typingEl.remove();
+    if(!reply) reply = '(empty reply vandhuchu 🤔)';
+    history.push({ role: 'user', content: text });
+    history.push({ role: 'assistant', content: reply });
+    if(history.length > 20) history.splice(0, history.length - 20); // last 10 turns mattum
+    addMsg(formatReply(reply), 'bot');
+  }).catch(err => {
+    typingEl.remove();
+    addMsg('⚠ <b>Error:</b> ' + escapeHtml(err.message || err), 'bot');
+  }).finally(() => {
+    busy = false;
+    sendBtn.disabled = false;
+    userInput.focus();
+  });
+}
+
+function addMsg(html, type) {
+  const div = document.createElement('div');
+  div.className = 'msg ' + type;
+  div.innerHTML = html;
+  chatBody.appendChild(div);
+  chatBody.scrollTop = chatBody.scrollHeight;
+}
+
+function showTyping() {
+  const div = document.createElement('div');
+  div.className = 'typing';
+  div.innerHTML = '<span></span><span></span><span></span>';
+  chatBody.appendChild(div);
+  chatBody.scrollTop = chatBody.scrollHeight;
+  return div;
+}
+
+async function getAIReply(userMsg) {
+  if(settings.provider === 'dummy') return await getDummyReply(userMsg);
+  if(!settings.apiKey || settings.apiKey.startsWith('PASTE_YOUR')) {
+    throw new Error('API key illa. ⚙ Settings la key paste pannunga (illa na Demo mode select pannunga).');
+  }
+  if(settings.provider === 'deepseek') return await callDeepSeek(userMsg);
+  if(settings.provider === 'gemini') return await callGemini(userMsg);
+  throw new Error('Unknown provider: ' + settings.provider);
+}
+
+/* DEEPSEEK API CALL */
+async function callDeepSeek(userMsg) {
+  // FIX: model DeepSeek model ah irukkanum (gpt-* illa)
+  let model = settings.model;
+  if(!/^deepseek-/.test(model)) model = 'deepseek-chat';
+
+  try {
+    const res = await fetch('https://api.deepseek.com/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + settings.apiKey
+      },
+      body: JSON.stringify({
+        model: model,
+        messages: [
+          { role: 'system', content: SYSTEM_PROMPT },
+          ...history,
+          { role: 'user', content: userMsg }
+        ],
+        temperature: 0.8,
+        max_tokens: 800,
+        stream: false
+      })
+    });
+
+    if(!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      let msg = err.error?.message || `HTTP ${res.status} ${res.statusText}`;
+      if(res.status === 401) msg = 'API key thappu (401). Key sariya paste pannirukeengala nu check pannunga.';
+      if(res.status === 402) msg = 'DeepSeek balance illa (402). Platform la top-up pannunga.';
+      if(res.status === 429) msg = 'Romba requests (429). Konjam neram kazhichu try pannunga.';
+      throw new Error(msg);
+    }
+
+    const data = await res.json();
+    return data.choices?.[0]?.message?.content || '';
+  } catch(e) {
+    if(e instanceof TypeError || (e.message && e.message.includes('Failed to fetch'))) {
+      throw new Error('Network issue. Internet check pannunga.');
+    }
+    throw e;
+  }
+}
+
+/* GEMINI API CALL */
+async function callGemini(userMsg) {
+  let model = settings.model;
+  if(!/^gemini-/.test(model)) model = 'gemini-3.1-flash-lite';
+
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(settings.apiKey)}`;
+  const contents = history.map(m => ({
+    role: m.role === 'assistant' ? 'model' : 'user',
+    parts: [{ text: m.content }]
+  }));
+  contents.push({ role: 'user', parts: [{ text: userMsg }] });
+
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
+      contents: contents
+    })
+  });
+
+  if(!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error?.message || 'Gemini failed');
+  }
+
+  const data = await res.json();
+  return data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+}
+
+function getDummyReply(msg) {
+  return new Promise(resolve => {
+    setTimeout(() => {
+      const m = msg.toLowerCase();
+      let reply;
+      if(m.includes('hi') || m.includes('hello') || m.includes('hai')) reply = 'Hello! 👋 Naan Max. Eppadi irukeenga?';
+      else if(m.includes('name')) reply = 'En peru **Max** 🤖';
+      else if(m.includes('help')) reply = 'Kandippa! Enna help venum?';
+      else reply = 'Interesting! Innum sollunga... 🤔';
+      resolve(reply);
+    }, 500 + Math.random() * 700);
+  });
+}
+
+userInput.addEventListener('keydown', (e) => {
+  if(e.key === 'Enter' && !e.isComposing) { e.preventDefault(); sendMsg(); }
+});
+
+sendBtn.addEventListener('mousedown', (e) => e.preventDefault());
+
+function scrollBottom() { chatBody.scrollTop = chatBody.scrollHeight; }
+userInput.addEventListener('focus', () => setTimeout(scrollBottom, 300));
+if(window.visualViewport) window.visualViewport.addEventListener('resize', scrollBottom);
+</script>
+</body>
+</html>
